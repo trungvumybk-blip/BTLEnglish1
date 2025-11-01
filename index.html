@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chung Cake: An Interactive Graph</title>
+    
+    <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+    
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #fdf6f3;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        h1 {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #5d4037;
+            z-index: 10;
+        }
+
+        #chung-cake-graph {
+            width: 100vw;
+            height: 100vh;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 80%;
+            max-width: 800px;
+            max-height: 80vh;
+            overflow-y: auto;
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .modal-content {
+            font-size: 1.2em;
+            color: #333;
+        }
+        
+        .modal-content button {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            margin-top: 20px;
+            font-size: 1.1em;
+            font-weight: bold;
+            color: white;
+            background-color: #81c784; /* A nice green */
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .modal-content button:hover {
+            background-color: #66bb6a;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 2em;
+            font-weight: bold;
+            color: #aaa;
+            cursor: pointer;
+            line-height: 1;
+        }
+        .modal-close:hover {
+            color: #d32f2f;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translate(-50%, -48%); }
+            to { opacity: 1; transform: translate(-50%, -50%); }
+        }
+
+    </style>
+</head>
+<body>
+
+    <h1>Welcome to Chung Cake!</h1>
+
+    <div id="chung-cake-graph"></div>
+
+    <div id="slide-modal" class="modal">
+        <span class="modal-close" onclick="closeModal()">&times;</span>
+        <div id="modal-body" class="modal-content">
+            <!-- Content will be injected by JavaScript -->
+        </div>
+    </div>
+
+    <script type="text/javascript">
+        const slideContent = {
+            1: {
+                title: "🌾 Chung Cake 🌾",
+                body: `<div style="display: flex; align-items: center; gap: 25px;">
+                           <div style="flex: 0 0 200px;">
+                               <img src="mainChungCake.png" alt="A cute illustration of a Chung Cake" style="width: 100%; border-radius: 15px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+                           </div>
+                           <div style="flex: 1;">
+                               <h2>The Soul of Tết</h2>
+                               <p>This is the legendary Chung Cake, a cornerstone of the Vietnamese Lunar New Year.</p>
+                           </div>
+                       </div>`
+            },
+            2: {
+                title: "What is Chung Cake?",
+                body: `<div style="display: flex; align-items: center; gap: 25px;">
+                           <div style="flex: 0 0 200px;">
+                               <img src="chungCake.gif" alt="Animated GIF of a Chung Cake" style="width: 100%; border-radius: 15px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+                           </div>
+                           <div style="flex: 1;">
+                               <h2>What is it?</h2>
+                               <p>It's a traditional rice cake, essential for the Tết holiday.</p>
+                               <ul>
+                                   <li>🟩 Square Shape</li>
+                                   <li>🎊 Tết Staple</li>
+                                   <li>🍃 Dong Leaves</li>
+                               </ul>
+                           </div>
+                       </div>`
+            },
+            3: {
+                title: "The Legend",
+                body: `<div style="display: flex; align-items: center; gap: 25px;">
+                           <div style="flex: 0 0 200px;">
+                               <img src="legendLangLieu.png" alt="The legend of Prince Lang Liêu" style="width: 100%; border-radius: 15px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+                           </div>
+                           <div style="flex: 1;">
+                               <h2>The Legend of Prince Lang Liêu</h2>
+                               <p>An ancient king challenged his sons to bring him the most meaningful offering. The 18th prince, Lang Liêu, created the square Chung Cake (Earth) and round Bánh Dày (Sky). The king was so impressed he chose Lang Liêu as his heir.</p>
+                           </div>
+                       </div>`
+            },
+            4: {
+                title: "The Recipe 📜",
+                body: `<h2>The Recipe 📜</h2>
+                       <p>The recipe for Chung Cake is a beautiful combination of simple, meaningful ingredients and a process that brings families together. Choose what you want to explore:</p>
+                       <button onclick="showIngredients()">View Ingredients & Symbolism</button>
+                       <button onclick="showProcessGraph()">View Making Process</button>`
+            },
+            401: {
+                title: "Ingredients & Symbolism",
+                body: "<h2>Every Ingredient Has Meaning</h2><ul><li><strong>🍚 Glutinous Rice:</strong> Represents the fertile soil of Vietnam, the heart of its agriculture.</li><li><strong>🌱 Mung Beans:</strong> Symbolize the harvest, prosperity, and the life nurtured by the soil.</li><li><strong>🍖 Pork Belly:</strong> Represents wealth, abundance, and the animals that live on Earth.</li><li><strong>🍃 Dong Leaves:</strong> Symbolize the loving care and protection of parents for their children.</li></ul>"
+            },
+            500: { 
+                title: "A Labor of Love",
+                body: `<h2>A Labor of Love</h2>
+                       <p>Making Chung Cake is a cherished tradition that often involves the whole family. The process requires patience and care, and the time spent waiting for the cakes to cook is a time for storytelling and togetherness.</p>
+                       <p>The graph is now highlighting the four main steps! Click on any of them to learn more.</p>`
+            },
+            // Process Steps with Images
+            501: {
+                title: "Step 1: Prep",
+                body: `<div style="display: flex; align-items: center; gap: 25px;">
+                           <div style="flex: 0 0 200px;"><img src="prep.gif" alt="Preparing ingredients for Chung Cake" style="width: 100%; border-radius: 15px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);"></div>
+                           <div style="flex: 1;">
+                               <h2>🔪 Step 1: Preparation</h2>
+                               <p>The rice is soaked, mung beans are mashed, and pork is marinated. Every ingredient is carefully prepared for wrapping.</p>
+                           </div>
+                       </div>`
+            },
+            502: {
+                title: "Step 2: Wrap",
+                body: `<div style="display: flex; align-items: center; gap: 25px;">
+                           <div style="flex: 0 0 200px;"><img src="wrap.gif" alt="Wrapping the Chung Cake" style="width: 100%; border-radius: 15px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);"></div>
+                           <div style="flex: 1;">
+                               <h2>🎁 Step 2: Wrapping</h2>
+                               <p>An art form! Dong leaves are folded into a square mold, then layered with rice, beans, and pork before being tied up tightly.</p>
+                           </div>
+                       </div>`
+            },
+            503: {
+                title: "Step 3: Boil",
+                body: `<div style="display: flex; align-items: center; gap: 25px;">
+                           <div style="flex: 0 0 200px;"><img src="boil.gif" alt="Boiling the Chung Cakes" style="width: 100%; border-radius: 15px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);"></div>
+                           <div style="flex: 1;">
+                               <h2>🔥 Step 3: Boiling</h2>
+                               <p>The cakes are boiled for 8-12 hours. This patient cooking melds the flavors and is a time for family to gather.</p>
+                           </div>
+                       </div>`
+            },
+            504: {
+                title: "Step 4: Press",
+                body: `<div style="display: flex; align-items: center; gap: 25px;">
+                           <div style="flex: 0 0 200px;"><img src="press.gif" alt="Pressing the cooked Chung Cakes" style="width: 100%; border-radius: 15px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);"></div>
+                           <div style="flex: 1;">
+                               <h2>🏋️ Step 4: Pressing</h2>
+                               <p>After boiling, the cakes are pressed under a weight to remove excess water, which preserves them and creates a dense texture.</p>
+                           </div>
+                       </div>`
+            },
+            // Cultural Significance with Image
+            6: {
+                title: "Cultural Significance",
+                body: `<div style="display: flex; align-items: center; gap: 25px;">
+                           <div style="flex: 0 0 200px;"><img src="culturalSignificance.png" alt="A family making Chung Cake together" style="width: 100%; border-radius: 15px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);"></div>
+                           <div style="flex: 1;">
+                               <h2>More Than Just Food</h2>
+                               <p>Chung Cake symbolizes gratitude to ancestors and the land. Making it is a time for family reunion and passing down traditions.</p>
+                           </div>
+                       </div>`
+            },
+            7: {
+                title: "Fun Facts! 🤓",
+                body: "<h2>Did You Know?</h2><ul><li>There's a cylindrical version from Southern Vietnam called <strong>Bánh Tét</strong>.</li><li>Leftover Chung Cake is often pan-fried until crispy, making a delicious dish called <strong>Bánh Chưng Rán</strong>.</li><li>Thanks to its careful wrapping, the cake can be preserved for several days at room temperature.</li></ul>"
+            }
+        };
+
+        const nodes = new vis.DataSet([
+            {id: 1, label: 'Chung Cake', shape: 'image', image: 'mainChungCake.png', size: 60},
+            {id: 2, label: 'What is it?', shape: 'image', image: 'whatisit.png', size: 60},
+            {id: 3, label: 'The Legend', shape: 'image', image: 'legendLangLieu.png', size: 60},
+            {id: 4, label: 'The Recipe 📜', shape: 'hexagon', color: '#ff8a65', size: 40},
+            {id: 6, label: 'Cultural Significance', shape: 'image', image: 'culturalSignificance.png', size: 60},
+            {id: 7, label: 'Fun Facts!', shape: 'ellipse', color: '#4dd0e1'},
+            
+            {id: 101, label: '🍚', shape: 'text', size: 30},
+            {id: 102, label: '🌱', shape: 'text', size: 30},
+            {id: 103, label: '🍖', shape: 'text', size: 30},
+            {id: 104, label: '🍃', shape: 'text', size: 30},
+            {id: 105, label: '🧂⬛', shape: 'text', size: 30},
+            
+            {id: 501, label: 'Prep', shape: 'image', image: 'prep.png', group: 'process'},
+            {id: 502, label: 'Wrap', shape: 'image', image: 'wrap.png', group: 'process'},
+            {id: 503, label: 'Boil', shape: 'image', image: 'boil.png', group: 'process'},
+            {id: 504, label: 'Press', shape: 'image', image: 'press.png', group: 'process'}
+        ]);
+
+        const edges = new vis.DataSet([
+            {from: 1, to: 2}, {from: 1, to: 3}, {from: 1, to: 4},
+            {from: 1, to: 6}, {from: 2, to: 7},
+            
+            {from: 4, to: 101, label: 'Rice'}, {from: 4, to: 102, label: 'Beans'},
+            {from: 4, to: 103, label: 'Pork'}, {from: 4, to: 104, label: 'Leaves'},
+            {from: 4, to: 105, label: 'Salt and Black Pepper'},
+            
+            {from: 4, to: 501}, 
+            
+            {from: 501, to: 502, arrows: 'to'},
+            {from: 502, to: 503, arrows: 'to'},
+            {from: 503, to: 504, arrows: 'to'}
+        ]);
+
+        const container = document.getElementById('chung-cake-graph');
+        const data = { nodes: nodes, edges: edges };
+        const options = {
+            interaction: { dragNodes: true, dragView: true, zoomView: true },
+            physics: {
+                solver: 'barnesHut',
+                barnesHut: {
+                    gravitationalConstant: -10000,
+                    springConstant: 0.05,
+                    springLength: 220,
+                    damping: 0.09
+                }
+            },
+            nodes: { font: { size: 18, color: '#333' }, borderWidth: 2 },
+            edges: { color: '#f48fb1', width: 2, font: { align: 'top' } },
+            groups: {
+                process: {
+                    color: {
+                        border: '#0288d1', background: '#81d4fa',
+                        highlight: { border: '#01579b', background: '#4fc3f7' },
+                        hover: { border: '#01579b', background: '#4fc3f7' }
+                    },
+                    borderWidth: 3
+                }
+            }
+        };
+
+        const network = new vis.Network(container, data, options);
+        const modal = document.getElementById('slide-modal');
+        const modalBody = document.getElementById('modal-body');
+
+        network.on("click", function (params) {
+            network.unselectAll();
+            if (params.nodes.length > 0) {
+                const nodeId = params.nodes[0];
+                const content = slideContent[nodeId];
+                
+                if (content) {
+                    modalBody.innerHTML = content.body;
+                    modal.style.display = 'block';
+                }
+
+                network.focus(nodeId, {
+                    scale: 1.2,
+                    animation: { duration: 800, easingFunction: 'easeInOutQuad' }
+                });
+            }
+        });
+
+        function closeModal() {
+            modal.style.display = 'none';
+            network.unselectAll();
+        }
+        
+        function showIngredients() {
+            modalBody.innerHTML = slideContent[401].body;
+            network.selectNodes([101, 102, 103, 104], false);
+        }
+
+        function showProcessGraph() {
+            const processNodeIds = [501, 502, 503, 504];
+            modalBody.innerHTML = slideContent[500].body;
+            network.fit({
+                nodes: processNodeIds,
+                animation: { duration: 1000, easingFunction: 'easeInOutQuad' }
+            });
+            network.selectNodes(processNodeIds, false);
+        }
+    </script>
+</body>
+</html>
